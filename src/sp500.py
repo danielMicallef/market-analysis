@@ -1,16 +1,19 @@
+# File for retrieval of sp500 Tickers from Wikipedia Page
+#
+
 import os, requests, pickle
 import bs4 as bs
 import unittest
 
 
-def get_sp500_tickers(update_sp500 = False):
+def get_sp500_tickers(update_sp500=False):
     """
 
     Retrieve Ticker Generic Data. This retrieves the relevant Wikipedia page and parses a table
     containing all the SP500 Tickers. This method may fail if the Wiki page is altered.
 
     :param update_sp500: retrieve from Pickle or update from Wikipedia
-    :return:
+    :return: list of tickers.
 
     """
 
@@ -24,7 +27,9 @@ def get_sp500_tickers(update_sp500 = False):
         soup = bs.BeautifulSoup(resp.text)
         wiki_table = soup.find('table', {'class': 'wikitable sortable'})
 
-        tickers = parse_sp500O_tickers_table(wiki_table)
+        tickers = []
+        for ticker in parse_sp500_tickers_table(wiki_table):
+            tickers.append(ticker)
 
         # write tickers to pickle
         with open(ticker_filename, 'wb') as handle:
@@ -38,26 +43,17 @@ def get_sp500_tickers(update_sp500 = False):
     return tickers
 
 
-def gen_tickers(tickers = get_sp500_tickers()):
-    for ticker in tickers:
-        yield ticker
-
-
-def parse_sp500O_tickers_table(wiki_table):
-    tickers = []
-
+def parse_sp500_tickers_table(wiki_table):
     for row in wiki_table.findAll('tr')[1:]:
-        ticker_info = {}
-        ticker_info['ticker'] = row.findAll('td')[0].text
-        ticker_info['gics_sector'] = row.findAll('td')[3].text
-        ticker_info['gics_sub_sector'] = row.findAll('td')[4].text
-
-        tickers.append(ticker_info)
-
-    return tickers
+        ticker_info = {
+            'ticker': row.findAll('td')[0].text,
+            'gics_sector': row.findAll('td')[3].text,
+            'gics_sub_sector': row.findAll('td')[4].text
+        }
+        yield ticker_info
 
 
-def get_sector(required_ticker, tickers = get_sp500_tickers()):
+def get_sector(required_ticker, tickers=get_sp500_tickers()):
     """
     Get Sector of Ticker
 
@@ -73,7 +69,7 @@ def get_sector(required_ticker, tickers = get_sp500_tickers()):
             return ticker['gics_sector']
 
 
-def get_sub_industry(required_ticker, tickers = get_sp500_tickers()):
+def get_sub_industry(required_ticker, tickers=get_sp500_tickers()):
     """
     Get sub-industry of company
 
@@ -90,3 +86,24 @@ def get_sub_industry(required_ticker, tickers = get_sp500_tickers()):
 class TestGetTickers(unittest.TestCase):
     def test_get_tickers(self):
         tickers = get_sp500_tickers()
+        self.assertTrue(self, any(ticker['ticker'] == 'MMM' for ticker in tickers))
+
+    def tickers_size(self):
+        self.assertTrue(self, len(get_sp500_tickers(True)) > 500)
+
+    def ticker_sectors(self):
+        sectors = {
+            'Utilities',
+            'Industrials',
+            'Telecommunication Services',
+            'Information Technology',
+            'Consumer Discretionary',
+            'Materials',
+            'Consumer Staples',
+            'Health Care',
+            'Financials',
+            'Energy',
+            'Real Estate'
+        }
+
+        self.assertTrue(self, sectors.issubset(set(ticker['gics_sector'] for ticker in get_sp500_tickers())))
