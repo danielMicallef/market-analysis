@@ -71,7 +71,7 @@ def get_ftse_sector(required_ticker, tickers = get_ftse100_tickers()):
     :return: sector of company - as per wiki page.
     """
 
-    return search(tickers, 'ticker', required_ticker)
+    return search(tickers, 'ticker', required_ticker)['ftse_sector']
 
 
 def search(list, key, value):
@@ -79,3 +79,21 @@ def search(list, key, value):
         if item[key] == value:
             return item
 
+class TestFtseTickers(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def test_search_PositiveTest_DictionaryItem(self):
+        test_list = [{'a':n, 'b': 2*n, 'c': 3*n}  for n in range(20)]
+        item = search(test_list, 'a', 1)
+        self.assertEquals(item['a'], 1)
+
+    def test_getFtseSector_NMCTicker_HealthCareSector(self):
+        sector = get_ftse_sector('NMC')
+        self.assertEquals(sector, "Health Care Equipment & Services")
+
+    def test_parseFtse100TickersTable_tickers(self):
+        pass
+
+    def test_get_ftse100_tickers(self):
+        pass
