@@ -22,6 +22,7 @@ def read_from_pickle(ticker):
             data = pickle.load(handle)
 
         return data
+
     except FileNotFoundError:
         print("File '{}' not found.".format(path))
         return None
