@@ -17,7 +17,7 @@ def get_sp500_tickers(update_sp500=False):
 
     """
 
-    ticker_filename = 'tickers.pickle'
+    ticker_filename = 'tickers_sp500.pickle'
     if not os.path.isfile(ticker_filename) or update_sp500:
         headers = {
             'User-Agent': 'Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17'
@@ -64,9 +64,7 @@ def get_sector(required_ticker, tickers=get_sp500_tickers()):
 
     """
 
-    for ticker in tickers:
-        if ticker['ticker'] == required_ticker:
-            return ticker['gics_sector']
+    return search(tickers, 'ticker', required_ticker)['gics_sector']
 
 
 def get_sub_industry(required_ticker, tickers=get_sp500_tickers()):
@@ -78,9 +76,13 @@ def get_sub_industry(required_ticker, tickers=get_sp500_tickers()):
     :return: sub-industry of company
     """
 
-    for ticker in tickers:
-        if ticker['ticker'] == required_ticker:
-            return ticker['gics_sub_sector']
+    return search(tickers, 'ticker', required_ticker)['gics_sub_sector']
+
+
+def search(list, key, value):
+    for item in list:
+        if item[key] == value:
+            return item
 
 
 class TestGetTickers(unittest.TestCase):
