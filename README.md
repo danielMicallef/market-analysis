@@ -1,0 +1,1 @@
+A set of scripts used to analyse stock market data.
