@@ -33,6 +33,8 @@ def company_data_gen(tickers, update=False):
         'User-Agent': 'Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17'
     }
 
+    rel_st_dev = lambda price_list: (statistics.stdev(price_list) / statistics.mean(price_list)) * 100
+
     for ticker in tickers:
         ticker = ticker['ticker']
         if not update:
@@ -74,6 +76,7 @@ def company_data_gen(tickers, update=False):
                 'expertPriceTarget': expert_price_targets,
                 'meanPriceTarget': statistics.mean(price_targets),
                 'stdDevPriceTargets':  statistics.stdev(price_targets),
+                'relStdDevPriceTargets': rel_st_dev(price_targets),
                 'averageExpectedPercChange': float((statistics.mean(price_targets) - last_price)/last_price) * 100
             }
 
@@ -103,7 +106,7 @@ def retrieve_data(tickers = get_sp500_tickers(), update=False):
 
 sp500_data = []
 
-for company in retrieve_data:
+for company in retrieve_data():
     sp500_data.append(company)
 
 sp500_data.sort(key=lambda k: k['averageExpectedPercChange'])
