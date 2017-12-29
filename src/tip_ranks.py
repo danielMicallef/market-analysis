@@ -1,5 +1,5 @@
 from sp500 import get_sp500_tickers
-from dateutil.parser import parse
+from dateutil.parser import *
 from datetime import timedelta
 from datetime import datetime
 from flask import Flask, render_template
@@ -33,6 +33,8 @@ def company_data_gen(tickers, update=False):
     headers = {
         'User-Agent': 'Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17'
     }
+
+    rel_st_dev = lambda price_list: (statistics.stdev(price_list) / statistics.mean(price_list)) * 100
 
     for ticker in tickers:
         ticker = ticker['ticker']
@@ -75,8 +77,9 @@ def company_data_gen(tickers, update=False):
                 'lastPrice': last_price,
                 'expertPriceTarget': expert_price_targets,
                 'meanPriceTarget': statistics.mean(price_targets),
-                'stdDevPriceTargets': statistics.stdev(price_targets),
-                'averageExpectedPercChange': float((statistics.mean(price_targets) - last_price) / last_price) * 100
+                'stdDevPriceTargets':  statistics.stdev(price_targets),
+                'relStdDevPriceTargets': rel_st_dev(price_targets),
+                'averageExpectedPercChange': float((statistics.mean(price_targets) - last_price)/last_price) * 100
             }
 
             yield company_data
