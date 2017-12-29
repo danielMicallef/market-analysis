@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block body %}
+
+<table>
+    <thead>
+    <th>
+        Ticker
+    </th>
+    <th>
+        Expected Change
+    </th>
+    </thead>
+    <tbody>
+    {% for ticker_data in stock_index_data %}
+        <tr>
+            <td>{{ticker_data.ticker}}</td>
+            <td>{{ticker_data.averageExpectedPercChange}}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<button>Refresh Data</button>
+
+{% endblock %}
+

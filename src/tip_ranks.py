@@ -1,7 +1,8 @@
 from sp500 import get_sp500_tickers
-from dateutil.parser import *
+from dateutil.parser import parse
 from datetime import timedelta
 from datetime import datetime
+from flask import Flask, render_template
 
 import requests
 import json
@@ -35,6 +36,7 @@ def company_data_gen(tickers, update=False):
 
     for ticker in tickers:
         ticker = ticker['ticker']
+        # todo
         if not update:
             data = read_from_pickle(ticker)
 
@@ -55,7 +57,7 @@ def company_data_gen(tickers, update=False):
                     "expert": expert['name'],
                     "rating": expert['rankings'][0]['stars'],
                     "priceTarget": rating['priceTarget'],
-                    "date":parse(rating['time'])
+                    "date": parse(rating['time'])
                 }
                 for expert in data['experts']
                 for rating in expert['ratings']
@@ -63,7 +65,7 @@ def company_data_gen(tickers, update=False):
             ]
 
             price_targets = [priceTarget['priceTarget'] for priceTarget in expert_price_targets]
-            last_price = data['prices'][len(data['prices'])-1]['p']
+            last_price = data['prices'][len(data['prices']) - 1]['p']
 
             company_data = {
                 'ticker': data['ticker'],
@@ -73,12 +75,12 @@ def company_data_gen(tickers, update=False):
                 'lastPrice': last_price,
                 'expertPriceTarget': expert_price_targets,
                 'meanPriceTarget': statistics.mean(price_targets),
-                'stdDevPriceTargets':  statistics.stdev(price_targets),
-                'averageExpectedPercChange': float((statistics.mean(price_targets) - last_price)/last_price) * 100
+                'stdDevPriceTargets': statistics.stdev(price_targets),
+                'averageExpectedPercChange': float((statistics.mean(price_targets) - last_price) / last_price) * 100
             }
 
             yield company_data
-        except :
+        except:
             print("Connection Error with Ticker {}".format(ticker))
 
 
@@ -92,7 +94,7 @@ def update_data(tickers):
         write_to_pickle(company_data['ticker'], company_data)
 
 
-def retrieve_data(tickers = get_sp500_tickers(), update=False):
+def retrieve_data(tickers=get_sp500_tickers(), update=False):
     if update:
         update_data(tickers)
 
@@ -101,11 +103,26 @@ def retrieve_data(tickers = get_sp500_tickers(), update=False):
         if data is not None:
             yield data
 
-sp500_data = []
 
-for company in retrieve_data:
-    sp500_data.append(company)
+app = Flask(__name__)
 
-sp500_data.sort(key=lambda k: k['averageExpectedPercChange'])
 
-# update_data()
+def get_data_list():
+    sp500_data = []
+
+    for company in retrieve_data(update=False):
+        sp500_data.append(company)
+
+    sp500_data.sort(key=lambda k: k['averageExpectedPercChange'])
+
+    return sp500_data
+
+
+@app.route('/get/company_data', methods=['GET'])
+def list_of_company_details():
+    return get_data_list()
+
+
+@app.route('/index')
+def index():
+    return render_template('index.html', stock_index_data=get_data_list())
