@@ -29,7 +29,7 @@ def read_from_pickle(ticker):
         return None
 
 
-def company_data_gen(tickers, update=False):
+def company_data_gen(tickers, update=False, to_date= datetime.today(), date_range = 90):
     headers = {
         'User-Agent': 'Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17'
     }
@@ -51,7 +51,7 @@ def company_data_gen(tickers, update=False):
             print("Data loaded. Retrieving Expert Price Target")
 
             # retrieve only reviews within the last 90 days
-            target_date_range = datetime.today() - timedelta(days=90)
+            from_date = to_date - timedelta(days=date_range)
 
             # expert price target
             expert_price_targets = [
@@ -63,11 +63,12 @@ def company_data_gen(tickers, update=False):
                 }
                 for expert in data['experts']
                 for rating in expert['ratings']
-                if rating['priceTarget'] is not None and parse(rating['time']) > target_date_range
+                if rating['priceTarget'] is not None and
+                   from_date < parse(rating['time']) < to_date
             ]
 
             price_targets = [priceTarget['priceTarget'] for priceTarget in expert_price_targets]
-            last_price = data['prices'][len(data['prices']) - 1]['p']
+            last_price = data['prices'][len(data['prices'])-1]['p']
 
             company_data = {
                 'ticker': data['ticker'],
@@ -90,6 +91,12 @@ def company_data_gen(tickers, update=False):
 # path = f"https://www.tipranks.com/api/stocks/getNewsSentiments/?ticker={ticker}"
 # path = f"https://www.tipranks.com/api/stocks/getNews/?ticker={ticker}"
 
+
+def get_company_price_changes(ticker, from_date, to_date):
+    import pandas_datareader.data as web
+    f = web.DataReader("F", 'google', from_date, to_date)
+    # todo
+
 def update_data(tickers):
     print("tickers retrieved.")
 
@@ -106,7 +113,6 @@ def retrieve_data(tickers=get_sp500_tickers(), update=False):
         if data is not None:
             yield data
 
-
 app = Flask(__name__)
 
 
@@ -119,7 +125,6 @@ def get_data_list():
     sp500_data.sort(key=lambda k: k['averageExpectedPercChange'])
 
     return sp500_data
-
 
 @app.route('/get/company_data', methods=['GET'])
 def list_of_company_details():
