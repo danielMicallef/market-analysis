@@ -29,7 +29,7 @@ def read_from_pickle(ticker):
         return None
 
 
-def company_data_gen(tickers, update=False, to_date= datetime.today(), date_range = 90):
+def company_data_gen(tickers, update=False, to_date=datetime.today(), date_range=90):
     headers = {
         'User-Agent': 'Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.27 Safari/537.17'
     }
@@ -63,27 +63,30 @@ def company_data_gen(tickers, update=False, to_date= datetime.today(), date_rang
                 }
                 for expert in data['experts']
                 for rating in expert['ratings']
-                if rating['priceTarget'] is not None and
-                   from_date < parse(rating['time']) < to_date
+                if rating['priceTarget'] is not None and from_date < parse(rating['time']) < to_date
             ]
 
             price_targets = [priceTarget['priceTarget'] for priceTarget in expert_price_targets]
-            last_price = data['prices'][len(data['prices'])-1]['p']
+            last_price = data['prices'][len(data['prices']) - 1]['p']
 
             company_data = {
                 'ticker': data['ticker'],
+                'sector': ticker['gics_sector'],
+                'sub_sector': ticker['gics_sub_sector'],
                 'market': data['market'],
                 'description': data['description'],
                 'hasDividends': data['hasDividends'],
                 'lastPrice': last_price,
                 'expertPriceTarget': expert_price_targets,
                 'meanPriceTarget': statistics.mean(price_targets),
-                'stdDevPriceTargets':  statistics.stdev(price_targets),
+                'stdDevPriceTargets': statistics.stdev(price_targets),
                 'relStdDevPriceTargets': rel_st_dev(price_targets),
-                'averageExpectedPercChange': float((statistics.mean(price_targets) - last_price)/last_price) * 100
+                'averageExpectedPercChange': float((statistics.mean(price_targets) - last_price) / last_price) * 100,
+                'peRatio': get_pe_ratio(ticker['ticker'])
             }
 
             yield company_data
+
         except:
             print("Connection Error with Ticker {}".format(ticker))
 
@@ -92,45 +95,66 @@ def company_data_gen(tickers, update=False, to_date= datetime.today(), date_rang
 # path = f"https://www.tipranks.com/api/stocks/getNews/?ticker={ticker}"
 
 
+def get_forward_pe_ratio(ticker):
+    """
+        Stock Price / Future Earnings Per Share
+    :param ticker:
+    :return: forward PE Ratio
+    """
+
+    from pinance import Pinance
+    pinance_data = Pinance(ticker)
+    pinance_data.get_quotes()
+    pinance_data.quotes_data['forwardPE']
+
+
+def get_trailing_pe_ratio(ticker):
+    """
+    Stock Price
+    :param ticker:
+    :return:
+    """
+
 def get_company_price_changes(ticker, from_date, to_date):
     import pandas_datareader.data as web
     f = web.DataReader("F", 'google', from_date, to_date)
     # todo
 
-def update_data(tickers):
+
+def update_data(tickers, to_date=datetime.today()):
     print("tickers retrieved.")
 
-    for company_data in company_data_gen(tickers, update=True):
+    for company_data in company_data_gen(tickers, update=True, to_date=to_date):
         write_to_pickle(company_data['ticker'], company_data)
 
 
-def retrieve_data(tickers=get_sp500_tickers(), update=False):
+def retrieve_data(tickers=get_sp500_tickers(), update=False, to_date=datetime.today()):
     if update:
-        update_data(tickers)
+        update_data(tickers, to_date=to_date)
 
     for ticker in tickers:
         data = read_from_pickle(ticker['ticker'])
         if data is not None:
             yield data
 
-app = Flask(__name__)
+
+def tickers_where_none(tickers=get_sp500_tickers()):
+    for ticker in tickers:
+        data = read_from_pickle(ticker)
+        if data is None:
+            yield ticker
 
 
-def get_data_list():
+def get_data_list(update=False, to_date=datetime.today()):
     sp500_data = []
 
-    for company in retrieve_data(update=False):
+    for company in retrieve_data(update=update, to_date=to_date):
         sp500_data.append(company)
 
     sp500_data.sort(key=lambda k: k['averageExpectedPercChange'])
+    # we care about most profitable first!
+    sp500_data.reverse()
 
     return sp500_data
 
-@app.route('/get/company_data', methods=['GET'])
-def list_of_company_details():
-    return get_data_list()
 
-
-@app.route('/index')
-def index():
-    return render_template('index.html', stock_index_data=get_data_list())
